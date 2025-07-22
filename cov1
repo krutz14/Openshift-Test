@@ -1,0 +1,43 @@
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+
+# Sample key-value data
+data_dict = {
+    "Name": "John Doe",
+    "Occupation": "Senior Software Engineer with over 10 years of experience in various domains including AI and automation.",
+    "Location": "San Francisco, CA",
+    "Bio": "John is passionate about building scalable systems and mentoring junior engineers. He enjoys hiking and photography in his spare time."
+}
+
+# Setup PDF
+doc = SimpleDocTemplate("vertical_table.pdf", pagesize=A4)
+styles = getSampleStyleSheet()
+story = []
+
+# Prepare table data: each row is a [key, value] pair with Paragraphs for wrapping
+table_data = []
+for key, value in data_dict.items():
+    row = [Paragraph(str(key), styles["Normal"]),
+           Paragraph(str(value), styles["Normal"])]
+    table_data.append(row)
+
+# Create table
+table = Table(table_data, colWidths=[100, 350])  # Adjust column widths as needed
+
+# Style the table
+table.setStyle(TableStyle([
+    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+    ('FONTSIZE', (0, 0), (-1, -1), 10),
+    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ('TOPPADDING', (0, 0), (-1, -1), 4),
+    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+]))
+
+story.append(table)
+doc.build(story)
