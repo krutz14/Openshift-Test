@@ -1,0 +1,114 @@
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from html.parser import HTMLParser
+import os
+
+class HTMLToPDFParser(HTMLParser):
+    def __init__(self, pdf_story):
+        super().__init__()
+        self.story = pdf_story
+        self.styles = getSampleStyleSheet()
+        self.current_data = ""
+        self.current_tag = ""
+        self.table_data = []
+        self.current_row = []
+        self.in_table = False
+
+    def handle_starttag(self, tag, attrs):
+        self.current_tag = tag
+        attrs_dict = dict(attrs)
+
+        if tag == 'br':
+            self.story.append(Spacer(1, 10))
+
+        elif tag == 'img':
+            img_path = attrs_dict.get('src', '')
+            if os.path.exists(img_path):
+                img = Image(img_path, width=200, height=150)
+                self.story.append(img)
+                self.story.append(Spacer(1, 10))
+            else:
+                self.story.append(Paragraph(f"[Missing image: {img_path}]", self.styles["Normal"]))
+
+        elif tag == 'table':
+            self.in_table = True
+            self.table_data = []
+
+        elif tag == 'tr':
+            self.current_row = []
+
+        elif tag == 'td':
+            self.current_data = ""
+
+    def handle_endtag(self, tag):
+        if tag == 'p':
+            self.story.append(Paragraph(self.current_data, self.styles["Normal"]))
+            self.story.append(Spacer(1, 12))
+            self.current_data = ""
+
+        elif tag == 'h1':
+            self.story.append(Paragraph(self.current_data, self.styles["Heading1"]))
+            self.story.append(Spacer(1, 12))
+            self.current_data = ""
+
+        elif tag == 'h2':
+            self.story.append(Paragraph(self.current_data, self.styles["Heading2"]))
+            self.story.append(Spacer(1, 12))
+            self.current_data = ""
+
+        elif tag == 'td':
+            self.current_row.append(self.current_data.strip())
+            self.current_data = ""
+
+        elif tag == 'tr':
+            self.table_data.append(self.current_row)
+            self.current_row = []
+
+        elif tag == 'table':
+            self.in_table = False
+            table = Table(self.table_data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            self.story.append(table)
+            self.story.append(Spacer(1, 12))
+            self.table_data = []
+
+    def handle_data(self, data):
+        self.current_data += data
+
+# Main function to generate PDF
+def convert_html_to_pdf(html_code, output_filename="output.pdf"):
+    doc = SimpleDocTemplate(output_filename, pagesize=A4)
+    story = []
+
+    parser = HTMLToPDFParser(story)
+    parser.feed(html_code)
+
+    doc.build(story)
+    print(f"PDF created: {output_filename}")
+
+
+
+html_input = """
+<h1>Sample Report</h1>
+<p>This is a paragraph with some <b>bold</b> text.</p>
+<h2>Image Example</h2>
+<img src="sample.jpg">
+<h2>Data Table</h2>
+<table>
+    <tr><td>Name</td><td>Age</td><td>Location</td></tr>
+    <tr><td>John</td><td>25</td><td>NY</td></tr>
+    <tr><td>Jane</td><td>28</td><td>LA</td></tr>
+</table>
+<p>End of the report.</p>
+"""
+
+convert_html_to_pdf(html_input)
